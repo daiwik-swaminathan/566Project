@@ -2,27 +2,23 @@
 
 This project classifies short NBA game audio clips as **highlight** or **non-highlight** moments using Mel spectrograms and a Convolutional Neural Network (CNN). Dimensionality reduction is applied using PCA as required by the course.
 
----
+## 1. 📁 Directory Structure
 
-## 📁 Directory Structure
-
+```
 .
 ├── highlight_classifier.py       # Main script for training and evaluating the model
 ├── README.md
 ├── NBAHighlightsWAV/            # Folder containing 27 highlight `.wav` clips
 └── NBANonHighlightsWAV/         # Folder containing 27 non-highlight `.wav` clips
+```
 
----
-
-## 🔍 Project Overview
+## 2. 🔍 Project Overview
 
 - **Goal**: Classify audio clips from NBA games into highlights (e.g., game-winners, buzzer-beaters) vs. non-highlights (e.g., free throws, regular plays).
 - **Input**: Short `.wav` files of NBA commentary.
 - **Output**: Binary classification label (`1 = highlight`, `0 = non-highlight`).
 
----
-
-## 🧠 Methodology
+## 3. 🧠 Methodology
 
 1. **Audio Preprocessing**
    - Load each audio clip using `librosa`
@@ -45,17 +41,15 @@ This project classifies short NBA game audio clips as **highlight** or **non-hig
    - 80/20 train-test split
    - Trained for 30 epochs with a batch size of 8
 
----
-
-## ✅ Requirements
+## 4. ✅ Requirements
 
 Install dependencies with:
 
+```bash
 pip install librosa numpy matplotlib scikit-learn tensorflow
+```
 
----
-
-## 🚀 Running the Project
+## 5. 🚀 Running the Project
 
 1. Ensure the following folders are populated:
    - `~/Desktop/NBAHighlightsWAV` — 27 `.wav` highlight clips
@@ -63,32 +57,22 @@ pip install librosa numpy matplotlib scikit-learn tensorflow
 
 2. Run the classifier:
 
+```bash
 python highlight_classifier.py
+```
 
----
-
-## 📊 Output
+## 6. 📊 Output
 
 - **Console metrics**:
   - Training/validation accuracy
   - Final test accuracy
   - Confusion matrix and classification report
 
----
-
-## 🔍 Example Spectrogram
+## 7. 🔍 Example Spectrogram
 
 (Sample spectrogram can be generated in the script. Replace this with an actual image if desired.)
 
----
-
-## 📌 Notes
+## 8. 📌 Notes
 
 - **PCA** is applied before CNN to satisfy the project’s dimensionality reduction requirement.
 - If you want to switch to a traditional ML classifier (e.g., SVM), simply remove the CNN section and use the PCA-reduced vectors directly.
-
----
-
-## 👨‍💻 Authors
-
-- Daiwik Swaminathan and Team — Cal Poly Data Mining Class (Spring 2025)
