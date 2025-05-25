@@ -21,25 +21,29 @@ This project classifies short NBA game audio clips as **highlight** or **non-hig
 ## 3. 🧠 Methodology
 
 1. **Audio Preprocessing**
-   - Load each audio clip using `librosa`
-   - Compute a **Mel spectrogram**
-   - Convert spectrogram to log scale (dB)
+   - Each `.wav` file is loaded using `librosa`
+   - Audio is padded or trimmed to 5 seconds for uniform length
+   - A **Mel spectrogram** is computed for each clip
+   - Spectrograms are converted to log scale (dB)
 
 2. **Dimensionality Reduction**
-   - Flatten spectrograms
-   - Apply **PCA** to reduce to 100 dimensions
-   - Reshape into `10 × 10` grayscale image-like input for CNN
+   - Spectrograms are flattened into 1D vectors
+   - **PCA** is applied to reduce dimensionality to **36 components**
+   - The reduced vectors are reshaped into `6 × 6` grayscale image-like tensors for CNN input
 
 3. **Model Architecture**
    - A simple **CNN** with:
-     - Two convolutional layers
-     - Max pooling
-     - Dense layers
-   - Binary output using sigmoid activation
+     - One 2D convolutional layer with a 3×3 kernel
+     - Max pooling layer (2×2)
+     - Flatten + dense layer
+     - Binary output with sigmoid activation
+   - Architecture chosen to avoid over-shrinking the 6×6 input size
 
 4. **Training Setup**
-   - 80/20 train-test split
+   - 80/20 train-test split (43 training samples, 11 test samples)
    - Trained for 30 epochs with a batch size of 8
+   - Loss optimized using binary cross-entropy and Adam optimizer
+   - Final model evaluated on test set using accuracy, precision, recall, F1-score, and confusion matrix
 
 ## 4. ✅ Requirements
 
