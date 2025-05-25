@@ -43,10 +43,20 @@ This project classifies short NBA game audio clips as **highlight** or **non-hig
 
 ## 4. ✅ Requirements
 
-Install dependencies with:
+We recommend using a Python virtual environment to isolate dependencies.
+
+### 1. Create and activate a virtual environment
+
+These steps assume you have Apple Silicon (PyTorch for Apple Silicon)
 
 ```bash
-pip install librosa numpy matplotlib scikit-learn tensorflow
+python3 -m venv highlight_env
+source highlight_env/bin/activate
+```
+
+```bash
+pip install torch torchvision torchaudio          
+pip install librosa numpy matplotlib scikit-learn
 ```
 
 ## 5. 🚀 Running the Project
