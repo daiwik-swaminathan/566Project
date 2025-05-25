@@ -52,8 +52,8 @@ pip install librosa numpy matplotlib scikit-learn tensorflow
 ## 5. 🚀 Running the Project
 
 1. Ensure the following folders are populated:
-   - `~/Desktop/NBAHighlightsWAV` — 27 `.wav` highlight clips
-   - `~/Desktop/NBANonHighlightsWAV` — 27 `.wav` non-highlight clips
+   - `NBAHighlightsWAV` — 27 `.wav` highlight clips
+   - `NBANonHighlightsWAV` — 27 `.wav` non-highlight clips
 
 2. Run the classifier:
 
