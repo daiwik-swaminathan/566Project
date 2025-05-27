@@ -59,6 +59,12 @@ source highlight_env/bin/activate
 ```
 
 ```bash
+pip install -r requirements.txt
+```
+
+OR manually:
+
+```bash
 pip install torch torchvision torchaudio          
 pip install librosa numpy matplotlib scikit-learn
 ```
