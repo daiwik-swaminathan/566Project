@@ -5,3 +5,4 @@ librosa
 numpy
 matplotlib
 scikit-learn
+pydub
