@@ -39,9 +39,10 @@ def save_clip(label, status_var):
     # Generate a uuid
     folder_path = "dataset_scraping"
     name = "JP"
+    sport = "TrackAndField"
     random_uuid = uuid.uuid4()
     folder = "highlights" if label == 'highlight' else "non_highlights"
-    filename = f"{folder_path}/{name}/{folder}/{clip_count}_{random_uuid}.wav"
+    filename = f"{folder_path}/{name}/{sport}/{folder}/{clip_count}_{random_uuid}.wav"
 
     capture.save_clip(filename)
 

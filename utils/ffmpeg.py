@@ -107,7 +107,8 @@ class SystemAudioCapture:
             buffer_copy = buffer_copy[:trimmed_size]
 
         reshaped = buffer_copy.reshape(-1, self.channels)
-
+        
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
         sf.write(filename, reshaped, self.samplerate, format='WAV', subtype='PCM_16')
         print(f"✅ Saved clip to {filename}")
 

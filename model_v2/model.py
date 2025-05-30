@@ -13,7 +13,7 @@ highlight_dir = './NBAHighlightsWAV'
 nonhighlight_dir = './NBANonHighlightsWAV'
 sample_rate = 22050
 n_mels = 128
-duration = 5.0
+duration = 10.0
 
 # === Model ===
 class AudioCNN(nn.Module):
@@ -63,7 +63,7 @@ def load_mel_spectrogram(path):
     return S_db
 
 # === Preprocess Function for Inference ===
-def preprocess_audio_for_model(input_data, sample_rate=22050, n_mels=128, duration=10.0, from_file=True, expected_time_frames=431):
+def preprocess_audio_for_model(input_data, sample_rate=44100, n_mels=128, duration=10.0, from_file=True, expected_time_frames=862):
     if from_file:
         y, sr = librosa.load(input_data, sr=sample_rate, duration=duration)
     else:
@@ -75,6 +75,8 @@ def preprocess_audio_for_model(input_data, sample_rate=22050, n_mels=128, durati
 
     S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=n_mels)
     S_db = librosa.power_to_db(S, ref=np.max)
+
+    print(S_db.shape[1], expected_time_frames)
 
     # Adjust time_frames
     if S_db.shape[1] < expected_time_frames:

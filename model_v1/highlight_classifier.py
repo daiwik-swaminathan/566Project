@@ -115,7 +115,7 @@ for epoch in range(30):
     print(f"Epoch {epoch+1}/30 - Loss: {running_loss:.4f}")
 
 # Save the model
-torch.save(model.state_dict(), 'model_state.pth')
+torch.save(model.state_dict(), 'model_v1/model_state.pth')
 
 # === Evaluation ===
 model.eval()
