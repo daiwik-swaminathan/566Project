@@ -1,0 +1,5 @@
+filename,timestamp,label
+dataset_scraping/JP/non_highlights/non_highlight_be301258-d869-46c2-9db3-7c00ac70dd2e.wav,2.35,non_highlight
+dataset_scraping/JP/non_highlights/non_highlight_30a16c42-940d-4640-aa99-e1065fed0185.wav,30.89,non_highlight
+dataset_scraping/JP/highlights/highlight_de4aa8f6-1f04-4dd0-929d-7e2a51455b6a.wav,32.72,highlight
+dataset_scraping/JP/highlights/highlight_c75e89ec-8992-484a-a9e4-ba58e37238d4.wav,75.02,highlight

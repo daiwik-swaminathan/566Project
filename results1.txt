@@ -1,0 +1,53 @@
+=== CNN Classifier Results (Highlight vs. Non-Highlight Audio Clips) ===
+
+Dataset:
+- 27 NBA highlights
+- 27 NBA non-highlights
+
+--- Training Loss ---
+Epoch 1/30 - Loss: 101.0388
+Epoch 2/30 - Loss: 41.5654
+Epoch 3/30 - Loss: 3.4539
+Epoch 4/30 - Loss: 0.1057
+Epoch 5/30 - Loss: 0.0036
+...
+Epoch 30/30 - Loss: 0.0002
+
+The model quickly reduced training loss to near-zero, which strongly suggests overfitting — it memorized the training data rather than learning generalizable patterns. This is common with small datasets.
+
+--- Test Set Performance (11 samples) ---
+Accuracy: 73%
+Precision, Recall, F1-score:
+
+Class 0 (Non-Highlight)
+- Precision: 0.71
+- Recall:    0.83
+- F1-Score:  0.77
+
+Class 1 (Highlight)
+- Precision: 0.75
+- Recall:    0.60
+- F1-Score:  0.67
+
+Macro Average F1: 0.72
+
+--- Confusion Matrix ---
+[[5 1]
+ [2 3]]
+
+Interpretation:
+- Correctly predicted 5 non-highlights (True Negatives)
+- Incorrectly predicted 1 non-highlight as a highlight (False Positive)
+- Missed 2 actual highlights (False Negatives)
+- Correctly predicted 3 highlights (True Positives)
+
+Overall, the model performs slightly better at identifying non-highlight clips. It struggles more with catching all highlights, which is reflected in the lower recall for class 1.
+
+--- Next Steps / Suggestions ---
+1. Add validation loss tracking to monitor overfitting.
+2. Plot predictions and sample spectrograms to inspect failure cases.
+3. Try basic audio augmentations to help the model generalize.
+4. Experiment with different input features (MFCCs, UMAP, etc.).
+5. Use cross-validation to evaluate the model more reliably given the small test set.
+
+This run was a strong first result, and the model is functioning correctly.
