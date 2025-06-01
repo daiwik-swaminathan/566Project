@@ -5,3 +5,6 @@ librosa
 numpy
 matplotlib
 scikit-learn
+numpy
+matplotlib
+soundfile
