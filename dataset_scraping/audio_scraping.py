@@ -38,7 +38,7 @@ def save_clip(label, status_var):
     global clip_count
     # Generate a uuid
     folder_path = "dataset_scraping"
-    name = "JP"
+    name = "TV"
     sport = "TrackAndField"
     random_uuid = uuid.uuid4()
     folder = "highlights" if label == 'highlight' else "non_highlights"
