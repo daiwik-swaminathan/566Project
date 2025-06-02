@@ -118,3 +118,4 @@ class SystemAudioCapture:
             self.process.terminate()
         if self.thread:
             self.thread.join()
+

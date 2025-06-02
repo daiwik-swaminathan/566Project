@@ -8,3 +8,8 @@ __pycache__/
 
 *.pth
 clips_metadata.csv
+*.pkl
+*.npz
+
+/validation_set
+/live_file
