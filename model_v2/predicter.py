@@ -1,3 +1,4 @@
+import datetime
 import joblib
 import librosa
 import numpy as np
@@ -22,19 +23,19 @@ BUFFER_SECONDS = 10
 NUM_CHANNELS = 2  # stereo
 PREDICT_INTERVAL = 1  # seconds between predictions
 THRESHOLD = 0.5  # prediction threshold
-LATENT_DIM = 32
+latent_dim = 2
 
 
 # === Load your trained PyTorch model ===
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-## Load model 1 - CNN based
+###  Load model 1 - CNN based
 # n_mels = 128
 # time_frames = 862  # or whatever your preprocessed spectrogram width is
 # model = AudioCNN(n_mels, time_frames)
 # model.load_state_dict(torch.load('model_v2/model_state.pth', map_location=device))
 # model.eval()
 
-## Load model 2 - VAE based
+###  Load model 2 - VAE based
 # checkpoint = torch.load('vae_model_state.pth', map_location=device)
 # n_mfcc = checkpoint['n_mfcc']
 # time_frames = checkpoint['time_frames']
@@ -42,15 +43,16 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # model.load_state_dict(checkpoint['model_state_dict'])
 # model.eval()
 
-## Load model 3
-checkpoint = torch.load('vae_model_state.pth', map_location=device)
+## Load model 3 - DAE based
+checkpoint = torch.load('./model_v2/vae_model_state.pth', map_location=device)
 n_mfcc = checkpoint['n_mfcc']
 time_frames = checkpoint['time_frames']
-model = ConvDAE(n_mfcc=n_mfcc, time=time_frames, latent_dim=LATENT_DIM).to(device)
+latent_dim = checkpoint['latent_dim']
+model = ConvDAE(n_mfcc=n_mfcc, time=time_frames, latent_dim=latent_dim).to(device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model.eval()
 
-latent_clf = LatentClassifier(latent_dim=LATENT_DIM).to(device)
+latent_clf = LatentClassifier(latent_dim=latent_dim).to(device)
 latent_clf.load_state_dict(checkpoint['latent_clf_state_dict'])
 
 data = np.load('./model_v2/training_latents.npz')
@@ -65,7 +67,7 @@ global recent_latents
 recent_latents = []
 
 session_start_time = time.time()
-
+highlight_times = []
 
 
 # === Audio capture setup ===
@@ -122,29 +124,14 @@ def start_gui():
     window.mainloop()
 
 # === Prediction logic ===
-def predict_on_buffer(buffer_copy, status_var, model, latent_clf, device, session_start_time, ax_latent, canvas_latent, threshold=0.6):
+def predict_on_buffer(buffer_copy, status_var, model, latent_clf, device, session_start_time, ax_latent, canvas_latent, threshold=0.7):
     import matplotlib.pyplot as plt
     from sklearn.decomposition import PCA
 
-    # save_video_latents(buffer_copy)
-
-    # Collapse stereo to mono
-    # mono_audio = np.mean(buffer_copy.reshape(-1, NUM_CHANNELS), axis=1)
-
-    # OPTIONAL: Placeholder for denoising (apply here if desired)
-    # mono_audio = denoise_audio(mono_audio)
 
     live_file = "live_file/live_capture.wav"
     y, sr = librosa.load(live_file, sr=SAMPLE_RATE, mono=True, duration=BUFFER_SECONDS)
-    # mfcc = preprocess_audio_buffer(y, sample_rate=SAMPLE_RATE, n_mfcc=26, time_frames=862)
-    # print(mfcc.shape)
-    # print(mfcc)
-
-    # Run prediction (model 2)
-    # prediction, new_latent = live_process_vae(y, model, latent_clf, device, n_mfcc=n_mfcc, time_frames=time_frames, threshold=threshold)
-    # prob = prediction[0][0]
-    # pred = prediction[0][1]
-
+ 
     # Run prediction (model 3)
     prediction, new_latent = live_process_dae(y, model, latent_clf, device, n_mfcc=n_mfcc, time_frames=time_frames, threshold=threshold)
     prob = prediction[0][0]
@@ -152,6 +139,7 @@ def predict_on_buffer(buffer_copy, status_var, model, latent_clf, device, sessio
  
     if pred == 1:
         timestamp = time.strftime("%H:%M:%S", time.gmtime(time.time() - session_start_time))
+        highlight_times.append(timestamp)  # Store highlight time
         print(f"🔥 Highlight detected at {timestamp} (prob={prob:.2f})")
         status_var.set(f"🔥 Highlight detected at {timestamp}")
     else:
@@ -179,11 +167,6 @@ def predict_on_buffer(buffer_copy, status_var, model, latent_clf, device, sessio
     # Update latent plot
     ax_latent.clear()
 
-    # Keep axis limits fixed
-    # ax_latent.set_xlim(-2.5, 2.5)
-    # ax_latent.set_ylim(-2, 2)
-
-
     # Plot recent points
     # Plot training latent background
     ax_latent.scatter(training_latents_2d[:, 0], training_latents_2d[:, 1],
@@ -199,7 +182,7 @@ def predict_on_buffer(buffer_copy, status_var, model, latent_clf, device, sessio
     ax_latent.legend()
     canvas_latent.draw()
 
-
+# === Save video latents ===
 def save_video_latents(buffer_copy):
     mono_audio = np.mean(buffer_copy.reshape(-1, NUM_CHANNELS), axis=1)
     # Save the audio segment as a .wav file
@@ -216,6 +199,7 @@ def save_video_latents(buffer_copy):
     latent_output_path = os.path.join("video_segments", latent_filename)
     np.save(latent_output_path, new_latent_2d)
 
+
 # === Cleanup ===
 def on_close():
     print("\n🛑 Stopping capture...")
@@ -223,31 +207,5 @@ def on_close():
     plt.close('all')
     os._exit(0)
 
-def evaluate_highlight_directory(folder_path):
-    total_files = 0
-    correctly_predicted = 0
 
-    for filename in os.listdir(folder_path):
-        if filename.endswith('.wav'):
-            total_files += 1
-            filepath = os.path.join(folder_path, filename)
-
-            input_array = preprocess_audio_for_model(filepath)
-            input_tensor = torch.tensor(input_array[np.newaxis, np.newaxis, :, :], dtype=torch.float32).to(device)
-
-            with torch.no_grad():
-                pred = model(input_tensor)
-                prob = pred.item()
-
-            if prob > 0.5:
-                correctly_predicted += 1
-                print(f"{filename}: ✅ Highlight (prob={prob:.2f})")
-            else:
-                print(f"{filename}: ❌ Missed (prob={prob:.2f})")
-
-    print(f"\nSummary: {correctly_predicted}/{total_files} correctly classified as highlights ({(correctly_predicted / total_files) * 100:.2f}%)")
-
-# Example usage
-# evaluate_highlight_directory('./NBAHighlightsWAV')
-# === Start GUI (main thread) ===
 start_gui()

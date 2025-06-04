@@ -7,6 +7,13 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 import librosa
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
+import numpy as np
+import librosa
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
+
+
 
 # === ConvVAE Model ===
 class ConvVAE(nn.Module):
@@ -96,9 +103,6 @@ class MFCCDataset(Dataset):
         mfcc = preprocess_audio_buffer(y, sample_rate=self.sr, n_mfcc=self.n_mfcc, time_frames=self.time_frames)
         return torch.tensor(mfcc[np.newaxis, :, :], dtype=torch.float32), torch.tensor(label, dtype=torch.float32)
        
-    
-
-import torch.nn as nn
 
 class LatentClassifier(nn.Module):
     def __init__(self, latent_dim):
@@ -140,6 +144,7 @@ def train_vae(model, dataloader, device, num_epochs=10):
         print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {avg_loss:.4f}")
 
 
+# === Classifier Training ===
 def train_vae_classifier(model, latent_clf, dataloader, device, num_epochs=10):
     # Extract latent features
     X_latent, y_labels = extract_latents(model, dataloader, device)
@@ -161,7 +166,7 @@ def train_vae_classifier(model, latent_clf, dataloader, device, num_epochs=10):
         optimizer.step()
         print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
 
-
+# === Prediction Function ===
 def run_predict(model, latent_clf, dataloader, device, threshold=0.5):
     model.eval()
     all_probs = []
@@ -193,6 +198,7 @@ def run_predict(model, latent_clf, dataloader, device, threshold=0.5):
 
     return cleaned_results
 
+# === Latent Extraction Function ===
 def extract_latents(model, dataloader, device):
     latents = []
     labels = []
@@ -208,12 +214,6 @@ def extract_latents(model, dataloader, device):
 
 
 # === Live Processing ===
-import numpy as np
-import librosa
-
-import numpy as np
-import librosa
-
 def normalize_audio_to_std(y, target_std=0.02):
     current_std = np.std(y) + 1e-8  # avoid divide by zero
     scaled_y = y * (target_std / current_std)
@@ -276,12 +276,7 @@ def live_process_vae(buffer_copy, model, latent_clf, device, sample_rate=44100, 
     latents = extract_latents(model, dataloader, device)  # Ensure latents are extracted
     return y_pred, latents[0]
 
-
-import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
-
-
+# === Latent Space Visualization ===
 def visualize_latent_space(model, dataloader, device, method='tsne', return_reducer=False):
     model.eval()
     all_latents = []

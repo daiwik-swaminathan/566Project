@@ -152,14 +152,16 @@ LATENT_DIM = 32
 NUM_EPOCHS = 20
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-checkpoint = torch.load('vae_model_state.pth', map_location=device)
+checkpoint = torch.load('./model_v2/vae_model_state.pth', map_location=device)
 n_mfcc = checkpoint['n_mfcc']
 time_frames = checkpoint['time_frames']
-model = ConvDAE(n_mfcc=n_mfcc, time=time_frames, latent_dim=LATENT_DIM).to(device)
+latent_dim = checkpoint['latent_dim']
+
+model = ConvDAE(n_mfcc=n_mfcc, time=time_frames, latent_dim=latent_dim).to(device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model.eval()
 
-latent_clf = LatentClassifier(latent_dim=LATENT_DIM).to(device)
+latent_clf = LatentClassifier(latent_dim=latent_dim).to(device)
 latent_clf.load_state_dict(checkpoint['latent_clf_state_dict'])
 
 print("\nEvaluating DAE model on highlights folder...")

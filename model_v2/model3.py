@@ -15,6 +15,8 @@ from sklearn.decomposition import PCA
 class ConvDAE(nn.Module):
     def __init__(self, n_mfcc, time, latent_dim=32):
         super(ConvDAE, self).__init__()
+        self.n_mfcc = n_mfcc
+        self.time = time
         self.encoder_cnn = nn.Sequential(
             nn.Conv2d(1, 16, 3, stride=2, padding=1),
             nn.ReLU(),
@@ -23,10 +25,11 @@ class ConvDAE(nn.Module):
         )
         self.flatten = nn.Flatten()
         with torch.no_grad():
-            dummy_input = torch.zeros(1, 1, n_mfcc, time)
+            dummy_input = torch.zeros(1, 1, self.n_mfcc, self.time)
             dummy_encoded = self.encoder_cnn(dummy_input)
             self.pre_flatten_shape = dummy_encoded.shape[1:]
             self.flattened_size = dummy_encoded.view(1, -1).size(1)
+
         self.fc_latent = nn.Linear(self.flattened_size, latent_dim)
         self.fc_decode = nn.Linear(latent_dim, self.flattened_size)
         self.decoder_cnn = nn.Sequential(
@@ -76,30 +79,11 @@ class LatentClassifier(nn.Module):
     def forward(self, x):
         return self.classifier(x)
 
-# === Dataset Class ===
-# class MFCCDataset(Dataset):
-#     def __init__(self, file_label_list, sr=44100, duration=10, n_mfcc=26, time_frames=862):
-#         self.file_label_list = file_label_list
-#         self.sr = sr
-#         self.samples = sr * duration
-#         self.n_mfcc = n_mfcc
-#         self.time_frames = time_frames
-#         self.duration = duration
-#     def __len__(self):
-#         return len(self.file_label_list)
-#     def __getitem__(self, idx):
-#         path, label = self.file_label_list[idx]
-#         y, sr = librosa.load(path, sr=self.sr, duration=self.duration, mono=True)
-#         y = y / np.max(np.abs(y) + 1e-8)
-#         y = librosa.util.fix_length(y, size=self.samples)
-#         mfcc = preprocess_audio_buffer(y, sample_rate=self.sr, n_mfcc=self.n_mfcc, time_frames=self.time_frames)
-#         return torch.tensor(mfcc[np.newaxis, :, :], dtype=torch.float32), torch.tensor(label, dtype=torch.float32)
-
-
 import numpy as np
 import librosa
 import torch
 
+# === Utility Function to Extract Top Energy Segments ===
 def extract_top_energy_segments(y, sr, window_size=2.0, top_k=3):
     hop_length = int(window_size * sr)
     frame_count = (len(y) - hop_length) // hop_length
@@ -120,8 +104,9 @@ def extract_top_energy_segments(y, sr, window_size=2.0, top_k=3):
 
     return top_segments
 
+# === Dataset Class for MFCC Features ===
 class MFCCDataset(Dataset):
-    def __init__(self, file_label_list, sr=44100, duration=10, n_mfcc=26, time_frames=862, top_k=1):
+    def __init__(self, file_label_list, sr, duration, n_mfcc, time_frames, top_k=2):
         self.file_label_list = file_label_list
         self.sr = sr
         self.samples = sr * duration
@@ -158,14 +143,16 @@ class MFCCDataset(Dataset):
         mfcc = preprocess_audio_buffer(y, sample_rate=self.sr, n_mfcc=self.n_mfcc, time_frames=self.time_frames)
         return torch.tensor(mfcc[np.newaxis, :, :], dtype=torch.float32), torch.tensor(label, dtype=torch.float32)
 
-
 # === Preprocessing ===
 def normalize_audio_to_std(y, target_std=0.02):
     current_std = np.std(y) + 1e-8
     scaled_y = y * (target_std / current_std)
     return np.clip(scaled_y, -1.0, 1.0)
 
+# === Preprocess Audio Buffer (grab the mfcc features) ===
 def preprocess_audio_buffer(buffer_copy, sample_rate=44100, n_mfcc=26, time_frames=862, energy_threshold=1e-4):
+    
+    # Normalize the audio
     if np.issubdtype(buffer_copy.dtype, np.integer):
         buffer_copy = buffer_copy.astype(np.float32) / np.iinfo(buffer_copy.dtype).max
     if buffer_copy.ndim == 2:
@@ -179,11 +166,13 @@ def preprocess_audio_buffer(buffer_copy, sample_rate=44100, n_mfcc=26, time_fram
     else:
         mono_audio = mono_audio / (np.max(np.abs(mono_audio)) + 1e-8)
 
+    # Normalize to target standard deviation
     mono_audio = normalize_audio_to_std(mono_audio, target_std=0.02)
-    mel_spec = librosa.feature.melspectrogram(y=mono_audio, sr=sample_rate, n_mels=40)
+    mel_spec = librosa.feature.melspectrogram(y=mono_audio, sr=sample_rate, n_mels=max(128, n_mfcc))
     log_mel_spec = librosa.power_to_db(mel_spec, ref=np.max)
     mfcc = librosa.feature.mfcc(S=log_mel_spec, sr=sample_rate, n_mfcc=n_mfcc)
 
+    # Normalize MFCC features
     mfcc_mean = np.mean(mfcc, axis=1, keepdims=True)
     mfcc_std = np.std(mfcc, axis=1, keepdims=True)
     mfcc_std_clamped = np.maximum(mfcc_std, 1e-3)
@@ -225,7 +214,7 @@ def train_dae(model, dataloader, device, num_epochs=10):
             recon_loss = recon_loss_fn(recon_cropped, clean_cropped)
             clf_loss_val = clf_loss_fn(class_output.squeeze(1), labels)
 
-            total_batch_loss = 0.5 * recon_loss + 0.5 * clf_loss_val
+            total_batch_loss = 0.8 * recon_loss + 0.2 * clf_loss_val
             total_batch_loss.backward()
             optimizer.step()
             total_loss += total_batch_loss.item()
@@ -246,6 +235,7 @@ def extract_latents(model, dataloader, device):
     y = np.concatenate(labels)
     return X, y
 
+# === Prediction Function ===
 def run_predict(model, latent_clf, dataloader, device, threshold=0.5):
     model.eval()
     all_probs = []
@@ -268,6 +258,7 @@ def run_predict(model, latent_clf, dataloader, device, threshold=0.5):
     cleaned_results = [(round(float(prob), 3), int(pred)) for prob, pred in res]
     return cleaned_results
 
+# === Live Processing Helper Function ===
 def live_process_dae(buffer_copy, model, latent_clf, device, sample_rate=44100, n_mfcc=26, time_frames=862, threshold=0.5):
     mfcc = preprocess_audio_buffer(buffer_copy, sample_rate=sample_rate, n_mfcc=n_mfcc, time_frames=time_frames)
     input_tensor = torch.tensor(mfcc[np.newaxis, np.newaxis, :, :], dtype=torch.float32).to(device)
@@ -279,7 +270,8 @@ def live_process_dae(buffer_copy, model, latent_clf, device, sample_rate=44100, 
     latents = extract_latents(model, dataloader, device)
     return y_pred, latents[0]
 
-def train_vae_classifier(model, latent_clf, dataloader, device, num_epochs=10):
+# === Train DAE Classifier ===
+def train_dae_classifier(model, latent_clf, dataloader, device, num_epochs=10):
     # Extract latent features
     X_latent, y_labels = extract_latents(model, dataloader, device)
     X_latent = torch.tensor(X_latent, dtype=torch.float32).to(device)
@@ -330,8 +322,6 @@ def visualize_latent_space(model, dataloader, device, method='tsne', return_redu
     if return_reducer:
         return reducer
 
-
-
 def evaluate_dae_highlight_folder(model, latent_clf, device, highlights_dir, non_highlights_dir, n_mfcc=26, time_frames=862, threshold=0.5):
     y_true = []
     y_pred = []
@@ -375,11 +365,11 @@ def evaluate_dae_highlight_folder(model, latent_clf, device, highlights_dir, non
 # === Main ===
 if __name__ == "__main__":
     SAMPLE_RATE = 44100
-    N_MFCC = 26
+    N_MFCC = 100
     TIME_FRAMES = 862
-    LATENT_DIM = 32
-    NUM_EPOCHS = 20
-
+    LATENT_DIM = 2
+    NUM_EPOCHS = 10
+    DURATION = 10
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
    # List of multiple highlight folders
@@ -432,23 +422,19 @@ if __name__ == "__main__":
         for path, label in val_file_label_list:
             f.write(f"{path}\t{label}\n")
 
-    dataset = MFCCDataset(train_file_label_list, sr=SAMPLE_RATE, n_mfcc=N_MFCC, time_frames=TIME_FRAMES)
+    # Create dataset and dataloader
+    dataset = MFCCDataset(train_file_label_list, sr=SAMPLE_RATE, n_mfcc=N_MFCC, time_frames=TIME_FRAMES, duration=DURATION)
     dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
 
+    # Create and train the Denoising Autoencoder
     model = ConvDAE(n_mfcc=N_MFCC, time=TIME_FRAMES, latent_dim=LATENT_DIM).to(device)
     train_dae(model, dataloader, device, num_epochs=NUM_EPOCHS)
 
+    # Create and train the Latent Classifier
     latent_clf = LatentClassifier(latent_dim=LATENT_DIM).to(device)
-    train_vae_classifier(model, latent_clf, dataloader, device, num_epochs=NUM_EPOCHS)
+    train_dae_classifier(model, latent_clf, dataloader, device, num_epochs=NUM_EPOCHS)
 
-    # probs_preds = run_predict(model, latent_clf, dataloader, device)
-    # for (prob, pred), (filename, true_label) in zip(probs_preds, dataloader.dataset.file_label_list):
-    #     print(f"File: {filename}")
-    #     print(f"True Label: {true_label}, Predicted: {pred}, Probability: {prob:.3f}")
-    #     print("-" * 30)
-
-
-
+    # Save the models, latents, and training data
     training_latents, training_labels = extract_latents(model, dataloader, device)
     os.makedirs('model_v2', exist_ok=True)
     torch.save({
@@ -456,7 +442,8 @@ if __name__ == "__main__":
         'latent_clf_state_dict': latent_clf.state_dict(),
         'n_mfcc': N_MFCC,
         'time_frames': TIME_FRAMES,
-    }, 'vae_model_state.pth')
+        'latent_dim': LATENT_DIM,
+    }, './model_v2/vae_model_state.pth')
     np.savez('./model_v2/training_latents.npz', latents=training_latents, labels=training_labels)
 
     import joblib

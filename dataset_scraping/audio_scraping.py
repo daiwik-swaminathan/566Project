@@ -38,8 +38,8 @@ def save_clip(label, status_var):
     global clip_count
     # Generate a uuid
     folder_path = "dataset_scraping"
-    name = "TV"
-    sport = "TrackAndField"
+    name = "JP"
+    sport = "Basketball"
     random_uuid = uuid.uuid4()
     folder = "highlights" if label == 'highlight' else "non_highlights"
     filename = f"{folder_path}/{name}/{sport}/{folder}/{clip_count}_{random_uuid}.wav"
