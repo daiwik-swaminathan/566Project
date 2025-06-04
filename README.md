@@ -1,6 +1,6 @@
-# 🏀 NBA Highlight Audio Classifier
+# Sports Highlight Audio Classifier
 
-This project classifies short NBA game audio clips as **highlight** or **non-highlight** moments using Mel spectrograms and a Convolutional Neural Network (CNN). Dimensionality reduction is applied using PCA as required by the course.
+This project classifies short sport game audio clips as **highlight** or **non-highlight** moments using Mel spectrograms and a Convolutional Neural Network (CNN). Dimensionality reduction is applied using PCA as required by the course.
 
 ## 1. 📁 Directory Structure
 
